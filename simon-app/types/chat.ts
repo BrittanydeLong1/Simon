@@ -15,10 +15,9 @@ export type AppSettings = {
   mode: Mode;
   theme: "light" | "dark";
   localModel: string;
+  onlineProvider: "openai" | "openrouter";
   onlineModel: string;
-  onlineBaseUrl: string;
   apiKey: string;
-  persistApiKey: boolean;
   personality: PersonalitySettings;
 };
 
@@ -48,6 +47,6 @@ export type MemoryItem = {
 export type ChatRequest = {
   mode: Mode;
   messages: ChatMessage[];
-  settings: Pick<AppSettings, "localModel" | "onlineModel" | "onlineBaseUrl" | "apiKey" | "personality">;
+  settings: Pick<AppSettings, "localModel" | "onlineProvider" | "onlineModel" | "apiKey" | "personality">;
   memory: MemoryItem[];
 };

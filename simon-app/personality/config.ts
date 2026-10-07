@@ -13,9 +13,8 @@ export const defaultSettings: AppSettings = {
   mode: "offline",
   theme: "dark",
   localModel: "llama3.1",
+  onlineProvider: "openai",
   onlineModel: "gpt-4o-mini",
-  onlineBaseUrl: "https://api.openai.com/v1",
   apiKey: "",
-  persistApiKey: false,
   personality: defaultPersonality,
 };

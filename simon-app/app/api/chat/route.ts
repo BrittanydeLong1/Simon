@@ -10,6 +10,11 @@ function toProviderMessages(systemPrompt: string, messages: ChatMessage[]) {
   return [{ role: "system", content: systemPrompt }, ...messages.map(({ role, content }) => ({ role, content }))];
 }
 
+function providerBaseUrl(provider: ChatRequest["settings"]["onlineProvider"]) {
+  if (provider === "openrouter") return "https://openrouter.ai/api/v1";
+  return "https://api.openai.com/v1";
+}
+
 async function callOllama(request: ChatRequest, providerMessages: { role: string; content: string }[]) {
   const response = await fetch("http://127.0.0.1:11434/api/chat", {
     method: "POST",
@@ -34,7 +39,7 @@ async function callOnline(request: ChatRequest, providerMessages: { role: string
     throw new Error("Online mode requires an API key.");
   }
 
-  const base = request.settings.onlineBaseUrl.replace(/\/$/, "");
+  const base = providerBaseUrl(request.settings.onlineProvider);
   const response = await fetch(`${base}/chat/completions`, {
     method: "POST",
     headers: {

@@ -167,8 +167,8 @@ export function ChatShell() {
         messages: [...activeConversation.messages, userMessage],
         settings: {
           localModel: settings.localModel,
+          onlineProvider: settings.onlineProvider,
           onlineModel: settings.onlineModel,
-          onlineBaseUrl: settings.onlineBaseUrl,
           apiKey: settings.apiKey,
           personality: settings.personality,
         },
@@ -284,20 +284,28 @@ export function ChatShell() {
             </label>
 
             <label className="flex flex-col gap-1">
+              Online provider
+              <select
+                className="rounded bg-zinc-800 p-2"
+                value={settings.onlineProvider}
+                onChange={(e) =>
+                  setSettings((prev) => ({
+                    ...prev,
+                    onlineProvider: e.target.value as AppSettings["onlineProvider"],
+                  }))
+                }
+              >
+                <option value="openai">OpenAI</option>
+                <option value="openrouter">OpenRouter</option>
+              </select>
+            </label>
+
+            <label className="flex flex-col gap-1">
               Online model
               <input
                 className="rounded bg-zinc-800 p-2"
                 value={settings.onlineModel}
                 onChange={(e) => setSettings((prev) => ({ ...prev, onlineModel: e.target.value }))}
-              />
-            </label>
-
-            <label className="flex flex-col gap-1">
-              Online API base URL
-              <input
-                className="rounded bg-zinc-800 p-2"
-                value={settings.onlineBaseUrl}
-                onChange={(e) => setSettings((prev) => ({ ...prev, onlineBaseUrl: e.target.value }))}
               />
             </label>
 
@@ -309,20 +317,7 @@ export function ChatShell() {
                 value={settings.apiKey}
                 onChange={(e) => setSettings((prev) => ({ ...prev, apiKey: e.target.value }))}
               />
-            </label>
-
-            <label className="flex items-center gap-2 pt-6">
-              <input
-                type="checkbox"
-                checked={settings.persistApiKey}
-                onChange={(e) =>
-                  setSettings((prev) => ({
-                    ...prev,
-                    persistApiKey: e.target.checked,
-                  }))
-                }
-              />
-              Remember API key on this device
+              <span className="text-xs text-zinc-400">Stored in-memory only for this tab.</span>
             </label>
 
             <label className="flex flex-col gap-1">

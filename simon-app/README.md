@@ -22,4 +22,4 @@ Open `http://localhost:3000`.
 
 - Offline chats stay local unless you switch to online mode manually.
 - Online mode only sends the current active conversation and only when you send a message.
-- API keys can be session-only (default) or persisted locally if you opt in.
+- API keys are kept in-memory for the active tab and are not persisted to storage.

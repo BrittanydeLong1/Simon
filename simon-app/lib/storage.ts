@@ -3,7 +3,6 @@ import { AppSettings, Conversation } from "@/types/chat";
 
 const SETTINGS_KEY = "simon-settings-v1";
 const CONVERSATIONS_KEY = "simon-conversations-v1";
-const SESSION_API_KEY = "simon-session-api-key";
 
 export function loadSettings(): AppSettings {
   if (typeof window === "undefined") return defaultSettings;
@@ -11,11 +10,10 @@ export function loadSettings(): AppSettings {
   if (!raw) return defaultSettings;
   try {
     const parsed = JSON.parse(raw) as AppSettings;
-    const sessionKey = sessionStorage.getItem(SESSION_API_KEY) || "";
     return {
       ...defaultSettings,
       ...parsed,
-      apiKey: parsed.persistApiKey ? parsed.apiKey : sessionKey,
+      apiKey: "",
       personality: { ...defaultSettings.personality, ...parsed.personality },
     };
   } catch {
@@ -27,15 +25,10 @@ export function saveSettings(settings: AppSettings) {
   if (typeof window === "undefined") return;
   const toStore: AppSettings = {
     ...settings,
-    apiKey: settings.persistApiKey ? settings.apiKey : "",
+    apiKey: "",
   };
 
   localStorage.setItem(SETTINGS_KEY, JSON.stringify(toStore));
-  if (settings.persistApiKey) {
-    sessionStorage.removeItem(SESSION_API_KEY);
-  } else {
-    sessionStorage.setItem(SESSION_API_KEY, settings.apiKey);
-  }
 }
 
 export function loadConversations(): Conversation[] {
