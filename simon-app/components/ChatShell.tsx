@@ -127,13 +127,14 @@ export function ChatShell() {
   );
 
   const activeModeLabel = settings.mode === "offline" ? "Offline (Local Model)" : "Online (API)";
+  const modeMismatch = Boolean(activeConversation && activeConversation.mode !== settings.mode);
 
   const updateConversation = (next: Conversation) => {
     setConversations((prev) => prev.map((conversation) => (conversation.id === next.id ? next : conversation)));
   };
 
   const onSend = async () => {
-    if (!input.trim() || !activeConversation || sending) return;
+    if (!input.trim() || !activeConversation || sending || activeConversation.mode !== settings.mode) return;
 
     const userMessage: ChatMessage = {
       id: id(),
@@ -151,7 +152,6 @@ export function ChatShell() {
 
     const withUser: Conversation = {
       ...activeConversation,
-      mode: settings.mode,
       updatedAt: now(),
       title: summarizeTitle([...activeConversation.messages, userMessage]),
       messages: [...activeConversation.messages, userMessage, assistantPlaceholder],
@@ -528,6 +528,12 @@ export function ChatShell() {
         </section>
 
         <footer className="border-t border-zinc-800 p-3">
+          {modeMismatch && (
+            <p className="mx-auto mb-2 w-full max-w-3xl text-sm text-amber-400">
+              This {activeConversation?.mode} conversation can’t be sent in {settings.mode} mode. Switch modes or start a
+              new chat; conversation history stays in its original mode.
+            </p>
+          )}
           <div className="mx-auto flex w-full max-w-3xl gap-2">
             <textarea
               className="h-24 flex-1 rounded bg-zinc-800 p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
@@ -538,7 +544,7 @@ export function ChatShell() {
             <button
               className="rounded bg-indigo-500 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:bg-zinc-700"
               onClick={onSend}
-              disabled={sending || !input.trim()}
+              disabled={sending || !input.trim() || modeMismatch}
             >
               {sending ? "Thinking..." : "Send"}
             </button>
