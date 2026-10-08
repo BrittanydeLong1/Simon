@@ -94,28 +94,43 @@ function streamText(fullText: string, onChunk: (text: string) => void) {
 }
 
 export function ChatShell() {
-  const initialData = useMemo(() => loadInitialData(), []);
-  const [settings, setSettings] = useState<AppSettings>(initialData.settings ?? defaultSettings);
-  const [conversations, setConversations] = useState<Conversation[]>(initialData.conversations);
-  const [activeId, setActiveId] = useState<string>(initialData.activeId);
-  const [memory, setMemory] = useState<MemoryItem[]>(initialData.memory);
+  const [settings, setSettings] = useState<AppSettings>(defaultSettings);
+  const [conversations, setConversations] = useState<Conversation[]>([createBootstrapConversation(defaultSettings.mode)]);
+  const [activeId, setActiveId] = useState<string>(`bootstrap-${defaultSettings.mode}`);
+  const [memory, setMemory] = useState<MemoryItem[]>([]);
+  const [storageLoaded, setStorageLoaded] = useState(false);
   const [input, setInput] = useState("");
   const [sending, setSending] = useState(false);
   const [showMemory, setShowMemory] = useState(false);
   const [showSettings, setShowSettings] = useState(true);
+  const [showConversations, setShowConversations] = useState(false);
 
   useEffect(() => {
-    if (!conversations.length) return;
+    const timeout = window.setTimeout(() => {
+      const initialData = loadInitialData();
+      setSettings(initialData.settings);
+      setConversations(initialData.conversations);
+      setActiveId(initialData.activeId);
+      setMemory(initialData.memory);
+      setStorageLoaded(true);
+    }, 0);
+    return () => window.clearTimeout(timeout);
+  }, []);
+
+  useEffect(() => {
+    if (!storageLoaded || sending || !conversations.length) return;
     saveConversations(conversations);
-  }, [conversations]);
+  }, [conversations, sending, storageLoaded]);
 
   useEffect(() => {
+    if (!storageLoaded) return;
     saveSettings(settings);
-  }, [settings]);
+  }, [settings, storageLoaded]);
 
   useEffect(() => {
+    if (!storageLoaded) return;
     saveMemory(memory);
-  }, [memory]);
+  }, [memory, storageLoaded]);
 
   useEffect(() => {
     document.documentElement.classList.toggle("dark", settings.theme === "dark");
@@ -153,7 +168,10 @@ export function ChatShell() {
     const withUser: Conversation = {
       ...activeConversation,
       updatedAt: now(),
-      title: summarizeTitle([...activeConversation.messages, userMessage]),
+      title:
+        activeConversation.title === "New conversation"
+          ? summarizeTitle([...activeConversation.messages, userMessage])
+          : activeConversation.title,
       messages: [...activeConversation.messages, userMessage, assistantPlaceholder],
     };
 
@@ -210,13 +228,14 @@ export function ChatShell() {
     const next = createConversation(settings.mode);
     setConversations((prev) => [next, ...prev]);
     setActiveId(next.id);
+    setShowConversations(false);
   };
 
   const activeMemory = memory;
 
   return (
-    <div className="flex h-screen bg-zinc-950 text-zinc-100 dark:bg-zinc-950 dark:text-zinc-100">
-      <aside className="w-72 shrink-0 border-r border-zinc-800 bg-zinc-900/80 p-4 hidden md:block">
+    <div className="flex h-screen bg-slate-50 text-zinc-900 dark:bg-zinc-950 dark:text-zinc-100">
+      <aside className="hidden w-72 shrink-0 border-r border-slate-200 bg-slate-100/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/80 md:block">
         <button
           className="mb-4 w-full rounded bg-indigo-500 px-3 py-2 text-sm font-semibold hover:bg-indigo-400"
           onClick={createNewConversation}
@@ -230,29 +249,39 @@ export function ChatShell() {
               key={conversation.id}
               onClick={() => setActiveId(conversation.id)}
               className={`w-full rounded px-3 py-2 text-left text-sm ${
-                conversation.id === activeId ? "bg-zinc-700" : "bg-zinc-800 hover:bg-zinc-700/80"
+                conversation.id === activeId
+                  ? "bg-zinc-200 dark:bg-zinc-700"
+                  : "bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/80"
               }`}
             >
               <div className="line-clamp-1">{conversation.title}</div>
-              <div className="text-xs text-zinc-400">{conversation.mode}</div>
+              <div className="text-xs text-zinc-500 dark:text-zinc-400">{conversation.mode}</div>
             </button>
           ))}
         </div>
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="border-b border-zinc-800 p-3">
+        <header className="border-b border-slate-200 p-3 dark:border-zinc-800">
           <div className="flex flex-wrap items-center gap-2 text-sm">
-            <span className="rounded bg-zinc-800 px-2 py-1 font-semibold">Active mode: {activeModeLabel}</span>
-            <span className="rounded bg-zinc-800 px-2 py-1">No automatic offline-to-online sync</span>
-            <button className="rounded bg-zinc-800 px-2 py-1" onClick={() => setShowSettings((s) => !s)}>
+            <button
+              className="rounded bg-zinc-200 px-2 py-1 dark:bg-zinc-800 md:hidden"
+              onClick={() => setShowConversations((visible) => !visible)}
+              aria-expanded={showConversations}
+              aria-controls="mobile-conversations"
+            >
+              Chats
+            </button>
+            <span className="rounded bg-zinc-200 px-2 py-1 font-semibold dark:bg-zinc-800">Active mode: {activeModeLabel}</span>
+            <span className="rounded bg-zinc-200 px-2 py-1 dark:bg-zinc-800">No automatic offline-to-online sync</span>
+            <button className="rounded bg-zinc-200 px-2 py-1 dark:bg-zinc-800" onClick={() => setShowSettings((s) => !s)}>
               Settings
             </button>
-            <button className="rounded bg-zinc-800 px-2 py-1" onClick={() => setShowMemory((s) => !s)}>
+            <button className="rounded bg-zinc-200 px-2 py-1 dark:bg-zinc-800" onClick={() => setShowMemory((s) => !s)}>
               Memory
             </button>
             <button
-              className="rounded bg-zinc-800 px-2 py-1"
+              className="rounded bg-zinc-200 px-2 py-1 dark:bg-zinc-800"
               onClick={() => setSettings((prev) => ({ ...prev, theme: prev.theme === "dark" ? "light" : "dark" }))}
             >
               Theme: {settings.theme}
@@ -260,12 +289,46 @@ export function ChatShell() {
           </div>
         </header>
 
+        {showConversations && (
+          <nav
+            id="mobile-conversations"
+            aria-label="Conversations"
+            className="max-h-64 overflow-y-auto border-b border-slate-200 bg-slate-100 p-3 dark:border-zinc-800 dark:bg-zinc-900 md:hidden"
+          >
+            <button
+              className="mb-2 w-full rounded bg-indigo-500 px-3 py-2 text-left text-sm font-semibold text-white hover:bg-indigo-400"
+              onClick={createNewConversation}
+            >
+              + New chat
+            </button>
+            <div className="space-y-2">
+              {conversations.map((conversation) => (
+                <button
+                  key={conversation.id}
+                  onClick={() => {
+                    setActiveId(conversation.id);
+                    setShowConversations(false);
+                  }}
+                  className={`w-full rounded px-3 py-2 text-left text-sm ${
+                    conversation.id === activeId
+                      ? "bg-zinc-200 dark:bg-zinc-700"
+                      : "bg-white hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/80"
+                  }`}
+                >
+                  <div className="line-clamp-1">{conversation.title}</div>
+                  <div className="text-xs text-zinc-500 dark:text-zinc-400">{conversation.mode}</div>
+                </button>
+              ))}
+            </div>
+          </nav>
+        )}
+
         {showSettings && (
-          <section className="grid gap-3 border-b border-zinc-800 bg-zinc-900/60 p-3 text-sm md:grid-cols-2 lg:grid-cols-3">
+          <section className="grid gap-3 border-b border-slate-200 bg-slate-100/80 p-3 text-sm dark:border-zinc-800 dark:bg-zinc-900/60 md:grid-cols-2 lg:grid-cols-3">
             <label className="flex flex-col gap-1">
               Mode
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.mode}
                 onChange={(e) => setSettings((prev) => ({ ...prev, mode: e.target.value as AppSettings["mode"] }))}
               >
@@ -277,7 +340,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Local model
               <input
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.localModel}
                 onChange={(e) => setSettings((prev) => ({ ...prev, localModel: e.target.value }))}
               />
@@ -286,7 +349,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Online provider
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.onlineProvider}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -303,7 +366,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Online model
               <input
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.onlineModel}
                 onChange={(e) => setSettings((prev) => ({ ...prev, onlineModel: e.target.value }))}
               />
@@ -313,17 +376,17 @@ export function ChatShell() {
               API key
               <input
                 type="password"
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.apiKey}
                 onChange={(e) => setSettings((prev) => ({ ...prev, apiKey: e.target.value }))}
               />
-              <span className="text-xs text-zinc-400">Stored in-memory only for this tab.</span>
+              <span className="text-xs text-zinc-500 dark:text-zinc-400">Stored in-memory only for this tab.</span>
             </label>
 
             <label className="flex flex-col gap-1">
               Humor
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.personality.humor}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -341,7 +404,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Sarcasm
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.personality.sarcasm}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -362,7 +425,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Bluntness
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.personality.bluntness}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -383,7 +446,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Response length
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.personality.responseLength}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -404,7 +467,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Emotional support
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.personality.emotionalSupport}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -425,7 +488,7 @@ export function ChatShell() {
             <label className="flex flex-col gap-1">
               Swearing
               <select
-                className="rounded bg-zinc-800 p-2"
+                className="rounded bg-white p-2 dark:bg-zinc-800"
                 value={settings.personality.swearing}
                 onChange={(e) =>
                   setSettings((prev) => ({
@@ -446,11 +509,11 @@ export function ChatShell() {
         )}
 
         {showMemory && (
-          <section className="border-b border-zinc-800 bg-zinc-900/50 p-3">
+          <section className="border-b border-slate-200 bg-slate-100/70 p-3 dark:border-zinc-800 dark:bg-zinc-900/50">
             <div className="mb-3 flex items-center justify-between">
               <h2 className="font-semibold">Memory & preferences</h2>
               <button
-                className="rounded bg-zinc-800 px-2 py-1 text-sm"
+                className="rounded bg-zinc-200 px-2 py-1 text-sm dark:bg-zinc-800"
                 onClick={() =>
                   setMemory((prev) => [...prev, { id: id(), label: "", value: "", updatedAt: now() }])
                 }
@@ -462,7 +525,7 @@ export function ChatShell() {
               {activeMemory.map((item) => (
                 <div key={item.id} className="grid gap-2 md:grid-cols-[180px_1fr_auto]">
                   <input
-                    className="rounded bg-zinc-800 p-2 text-sm"
+                    className="rounded bg-white p-2 text-sm dark:bg-zinc-800"
                     placeholder="Label"
                     value={item.label}
                     onChange={(e) =>
@@ -474,7 +537,7 @@ export function ChatShell() {
                     }
                   />
                   <input
-                    className="rounded bg-zinc-800 p-2 text-sm"
+                    className="rounded bg-white p-2 text-sm dark:bg-zinc-800"
                     placeholder="Remembered detail"
                     value={item.value}
                     onChange={(e) =>
@@ -508,7 +571,7 @@ export function ChatShell() {
                     title: e.target.value,
                   })
                 }
-                className="rounded border border-zinc-700 bg-zinc-900/70 px-3 py-2 text-sm font-semibold"
+                className="rounded border border-slate-300 bg-white px-3 py-2 text-sm font-semibold dark:border-zinc-700 dark:bg-zinc-900/70"
                 aria-label="Conversation title"
               />
 
@@ -516,7 +579,9 @@ export function ChatShell() {
                 <article
                   key={message.id}
                   className={`rounded-xl p-3 ${
-                    message.role === "user" ? "self-end bg-indigo-600 text-white" : "bg-zinc-800 text-zinc-100"
+                    message.role === "user"
+                      ? "self-end bg-indigo-600 text-white"
+                      : "bg-zinc-100 text-zinc-900 dark:bg-zinc-800 dark:text-zinc-100"
                   }`}
                 >
                   <p className="mb-1 text-xs uppercase tracking-wide opacity-75">{message.role}</p>
@@ -527,22 +592,22 @@ export function ChatShell() {
           )}
         </section>
 
-        <footer className="border-t border-zinc-800 p-3">
+        <footer className="border-t border-slate-200 p-3 dark:border-zinc-800">
           {modeMismatch && (
-            <p className="mx-auto mb-2 w-full max-w-3xl text-sm text-amber-400">
+            <p className="mx-auto mb-2 w-full max-w-3xl text-sm text-amber-700 dark:text-amber-400">
               This {activeConversation?.mode} conversation can’t be sent in {settings.mode} mode. Switch modes or start a
               new chat; conversation history stays in its original mode.
             </p>
           )}
           <div className="mx-auto flex w-full max-w-3xl gap-2">
             <textarea
-              className="h-24 flex-1 rounded bg-zinc-800 p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400"
+              className="h-24 flex-1 rounded bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-zinc-800"
               placeholder="Message Simon..."
               value={input}
               onChange={(e) => setInput(e.target.value)}
             />
             <button
-              className="rounded bg-indigo-500 px-4 py-2 font-semibold disabled:cursor-not-allowed disabled:bg-zinc-700"
+              className="rounded bg-indigo-500 px-4 py-2 font-semibold text-white disabled:cursor-not-allowed disabled:bg-zinc-300 disabled:text-zinc-500 dark:disabled:bg-zinc-700 dark:disabled:text-zinc-300"
               onClick={onSend}
               disabled={sending || !input.trim() || modeMismatch}
             >

@@ -11,7 +11,7 @@ Simon is a personal conversational AI web app with:
 ## Run
 
 ```bash
-cd /home/runner/work/Simon/Simon/simon-app
+cd simon-app
 npm install
 npm run dev
 ```

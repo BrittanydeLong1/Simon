@@ -54,7 +54,7 @@ async function callOnline(request: ChatRequest, providerMessages: { role: string
   });
 
   if (!response.ok) {
-    throw new Error("Online provider request failed. Check API key, model, and base URL.");
+    throw new Error("Online provider request failed. Check API key, model, and selected provider.");
   }
 
   const data = (await response.json()) as {
