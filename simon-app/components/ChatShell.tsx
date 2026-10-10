@@ -6,6 +6,7 @@ import { loadMemory, saveMemory } from "@/memory/storage";
 import { loadConversations, loadSettings, saveConversations, saveSettings } from "@/lib/storage";
 import { defaultSettings } from "@/personality/config";
 import { getChatReply } from "@/services/clientChat";
+import { streamText } from "@/lib/streamText";
 import { AppSettings, ChatMessage, Conversation, MemoryItem } from "@/types/chat";
 
 const starterMessage =
@@ -76,21 +77,6 @@ function summarizeTitle(messages: ChatMessage[]) {
   const firstUser = messages.find((m) => m.role === "user")?.content?.trim();
   if (!firstUser) return "New conversation";
   return firstUser.slice(0, 42);
-}
-
-function streamText(fullText: string, onChunk: (text: string) => void) {
-  return new Promise<void>((resolve) => {
-    const words = fullText.split(" ");
-    let index = 0;
-    const timer = setInterval(() => {
-      index += 1;
-      onChunk(words.slice(0, index).join(" "));
-      if (index >= words.length) {
-        clearInterval(timer);
-        resolve();
-      }
-    }, 22);
-  });
 }
 
 export function ChatShell() {
@@ -524,30 +510,36 @@ export function ChatShell() {
             <div className="space-y-2">
               {activeMemory.map((item) => (
                 <div key={item.id} className="grid gap-2 md:grid-cols-[180px_1fr_auto]">
-                  <input
-                    className="rounded bg-white p-2 text-sm dark:bg-zinc-800"
-                    placeholder="Label"
-                    value={item.label}
-                    onChange={(e) =>
-                      setMemory((prev) =>
-                        prev.map((entry) =>
-                          entry.id === item.id ? { ...entry, label: e.target.value, updatedAt: now() } : entry,
-                        ),
-                      )
-                    }
-                  />
-                  <input
-                    className="rounded bg-white p-2 text-sm dark:bg-zinc-800"
-                    placeholder="Remembered detail"
-                    value={item.value}
-                    onChange={(e) =>
-                      setMemory((prev) =>
-                        prev.map((entry) =>
-                          entry.id === item.id ? { ...entry, value: e.target.value, updatedAt: now() } : entry,
-                        ),
-                      )
-                    }
-                  />
+                  <label className="flex flex-col gap-1 text-sm">
+                    Memory label
+                    <input
+                      className="rounded bg-white p-2 text-sm dark:bg-zinc-800"
+                      placeholder="Label"
+                      value={item.label}
+                      onChange={(e) =>
+                        setMemory((prev) =>
+                          prev.map((entry) =>
+                            entry.id === item.id ? { ...entry, label: e.target.value, updatedAt: now() } : entry,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
+                  <label className="flex flex-col gap-1 text-sm">
+                    Remembered detail
+                    <input
+                      className="rounded bg-white p-2 text-sm dark:bg-zinc-800"
+                      placeholder="Remembered detail"
+                      value={item.value}
+                      onChange={(e) =>
+                        setMemory((prev) =>
+                          prev.map((entry) =>
+                            entry.id === item.id ? { ...entry, value: e.target.value, updatedAt: now() } : entry,
+                          ),
+                        )
+                      }
+                    />
+                  </label>
                   <button
                     className="rounded bg-rose-700 px-2 py-1 text-sm hover:bg-rose-600"
                     onClick={() => setMemory((prev) => prev.filter((entry) => entry.id !== item.id))}
@@ -585,7 +577,7 @@ export function ChatShell() {
                   }`}
                 >
                   <p className="mb-1 text-xs uppercase tracking-wide opacity-75">{message.role}</p>
-                  <MarkdownMessage text={message.content || "..."} />
+                  <MarkdownMessage text={message.content || "..."} inverted={message.role === "user"} />
                 </article>
               ))}
             </div>
@@ -600,7 +592,9 @@ export function ChatShell() {
             </p>
           )}
           <div className="mx-auto flex w-full max-w-3xl gap-2">
+            <label htmlFor="message-composer" className="sr-only">Message Simon</label>
             <textarea
+              id="message-composer"
               className="h-24 flex-1 rounded bg-white p-3 text-sm outline-none focus:ring-2 focus:ring-indigo-400 dark:bg-zinc-800"
               placeholder="Message Simon..."
               value={input}

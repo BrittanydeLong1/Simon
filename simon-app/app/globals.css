@@ -1,11 +1,15 @@
 @import "tailwindcss";
+@plugin "@tailwindcss/typography";
+@custom-variant dark (&:where(.dark, .dark *));
 
 :root {
+  color-scheme: light;
   --background: #f8fafc;
   --foreground: #111827;
 }
 
 .dark {
+  color-scheme: dark;
   --background: #09090b;
   --foreground: #f4f4f5;
 }

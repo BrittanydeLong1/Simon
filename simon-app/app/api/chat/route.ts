@@ -31,7 +31,8 @@ async function callOllama(request: ChatRequest, providerMessages: { role: string
   }
 
   const data = (await response.json()) as { message?: { content?: string } };
-  return data.message?.content?.trim() || "No response from local model.";
+  const content = data.message?.content;
+  return content?.trim() ? content : "No response from local model.";
 }
 
 async function callOnline(request: ChatRequest, providerMessages: { role: string; content: string }[]) {
@@ -61,12 +62,16 @@ async function callOnline(request: ChatRequest, providerMessages: { role: string
     choices?: Array<{ message?: { content?: string } }>;
   };
 
-  return data.choices?.[0]?.message?.content?.trim() || "No response from online model.";
+  const content = data.choices?.[0]?.message?.content;
+  return content?.trim() ? content : "No response from online model.";
 }
 
 export async function POST(req: Request) {
   try {
     const payload = (await req.json()) as ChatRequest;
+    if (payload.mode !== "offline" && payload.mode !== "online") {
+      throw new Error("Select offline or online mode before sending a message.");
+    }
     const systemPrompt = `${onboardingPrompt}\n\n${buildCorePrompt(payload.settings.personality, memoryToText(payload.memory))}`;
 
     const providerMessages = toProviderMessages(systemPrompt, payload.messages);
